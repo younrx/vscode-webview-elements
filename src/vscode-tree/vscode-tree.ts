@@ -151,10 +151,9 @@ const isBranch = (item: TreeItem) => {
 /**
  * @fires vsc-select Dispatched when an item is selected. The event data shape is described in the
  * `SelectEventDetail` interface.
- * @fires vsc-focus Dispatched when an item is focused. The event data shape is described in the
- * `FocusEventDetail` interface.
- * @fires vsc-hover Dispatched when an item is focused. The event data shape is described in the
- * `FocusEventDetail` interface (no difference with a `vsc-focus` event, except the event type).
+ * @fires vsc-hover Dispatched when an item is hovered. The event data shape is described in the
+ * `HoverEventDetail` interface.
+ * @fires vsc-hover-leave Dispatched when the tree is no longer hovered. This event has no associated data.
  * @fires vsc-run-action Dispatched when an action icon is clicked.
  *
  * @cssprop --vscode-focusBorder
