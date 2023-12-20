@@ -206,6 +206,11 @@ const styles: CSSResultGroup = [
       color: var(--vscode-list-hoverForeground);
     }
 
+    .contents.hovered {
+      background-color: var(--vscode-list-hoverBackground);
+      color: var(--vscode-list-hoverForeground);
+    }
+    
     .contents:hover,
     .contents.selected:hover {
       outline-color: var(--hover-outline-color);
