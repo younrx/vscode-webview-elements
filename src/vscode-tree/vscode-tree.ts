@@ -68,6 +68,7 @@ export interface TreeItem {
   open?: boolean;
   selected?: boolean;
   focused?: boolean;
+  hovered?: boolean,
   hasSelectedItem?: boolean;
   hasFocusedItem?: boolean;
   icons?: TreeItemIconConfig | boolean;
@@ -91,6 +92,21 @@ interface SelectEventDetail {
   value: string;
   /** Is the item opened if it's a branch. */
   open: boolean;
+  /** Path represents the item place in the tree. For example 1/2/3 means:
+   * `data[1].subItems[2].subItems[3]` */
+  path: string; // ex.: 0/0/1
+}
+
+/** Event payload of the `vsc-hover` event. */
+interface HoverEventDetail {
+  /** Icon configuration of the hovered item */
+  icons: TreeItemIconConfig | undefined | boolean;
+  /** Is item type branch or leaf. */
+  itemType: ItemType;
+  /** The visible label of the item. */
+  label: string;
+  /** The value associated to the item. */
+  value: string;
   /** Path represents the item place in the tree. For example 1/2/3 means:
    * `data[1].subItems[2].subItems[3]` */
   path: string; // ex.: 0/0/1
@@ -135,6 +151,10 @@ const isBranch = (item: TreeItem) => {
 /**
  * @fires vsc-select Dispatched when an item is selected. The event data shape is described in the
  * `SelectEventDetail` interface.
+ * @fires vsc-focus Dispatched when an item is focused. The event data shape is described in the
+ * `FocusEventDetail` interface.
+ * @fires vsc-hover Dispatched when an item is focused. The event data shape is described in the
+ * `FocusEventDetail` interface (no difference with a `vsc-focus` event, except the event type).
  * @fires vsc-run-action Dispatched when an action icon is clicked.
  *
  * @cssprop --vscode-focusBorder
@@ -193,6 +213,9 @@ export class VscodeTree extends VscElement {
   private _focusedItem: TreeItem | null = null;
 
   @state()
+  private _hoveredItem: TreeItem | null = null;
+
+  @state()
   private _selectedBranch: TreeItem | null = null;
 
   @state()
@@ -201,6 +224,18 @@ export class VscodeTree extends VscElement {
   public closeAll(): void {
     this._closeSubTreeRecursively(this.data);
     this.requestUpdate();
+  }
+
+  public selectItemByPath(pathStr: string) {
+    const path = pathStr.split('/').map((el) => Number(el));
+    const item = this._getItemByPath(path) as TreeItem;
+    this._selectItem(item, false);  // select but do not emit event
+  }
+
+  public hoverItemByPath(pathStr: string) {
+    const path = pathStr.split('/').map((el) => Number(el));
+    const item = this._getItemByPath(path) as TreeItem;
+    this._hoverItem(item, false);  // hover but do not emit event
   }
 
   connectedCallback(): void {
@@ -488,6 +523,7 @@ export class VscodeTree extends VscElement {
       description = '',
       selected = false,
       focused = false,
+      hovered = false,
       subItems = [],
     } = item;
     const {
@@ -534,6 +570,10 @@ export class VscodeTree extends VscElement {
 
     if (focused) {
       contentsClasses.push('focused');
+    }
+
+    if (hovered) {
+      contentsClasses.push('hovered');
     }
 
     return html`
@@ -590,7 +630,7 @@ export class VscodeTree extends VscElement {
     return ret;
   }
 
-  private _selectItem(item: TreeItem) {
+  private _selectItem(item: TreeItem, emitEvent = true) {
     if (this._selectedItem) {
       this._selectedItem.selected = false;
     }
@@ -642,10 +682,12 @@ export class VscodeTree extends VscElement {
       }
     }
 
-    this._emitSelectEvent(
-      this._selectedItem as TreeItem,
-      this._selectedItem.path!.join('/')
-    );
+    if(emitEvent) {
+      this._emitSelectEvent(
+        this._selectedItem as TreeItem,
+        this._selectedItem.path!.join('/')
+      );
+    }
 
     this.requestUpdate();
   }
@@ -686,6 +728,21 @@ export class VscodeTree extends VscElement {
     }
   }
 
+  private _hoverItem(item: TreeItem, emitEvent = true) {
+    if (this._hoveredItem) {
+      this._hoveredItem.hovered = false;
+    }
+    this._hoveredItem = item;
+    item.hovered = true;
+
+    if(emitEvent) {
+      this._emitHoverEvent(
+        item as TreeItem,
+        item.path!.join('/')
+      );
+    }
+  }
+
   private _closeSubTreeRecursively(tree: TreeItem[]) {
     tree.forEach((item) => {
       item.open = false;
@@ -709,6 +766,25 @@ export class VscodeTree extends VscElement {
 
     this.dispatchEvent(
       new CustomEvent<SelectEventDetail>('vsc-select', {
+        bubbles: true,
+        composed: true,
+        detail,
+      })
+    );
+  }
+
+  private _emitHoverEvent(item: TreeItem, path: string) {
+    const {icons, label, value} = item;
+    const detail = {
+      icons,
+      itemType: isBranch(item) ? 'branch' : ('leaf' as ItemType),
+      label,
+      value: value || label,
+      path,
+    };
+
+    this.dispatchEvent(
+      new CustomEvent<HoverEventDetail>('vsc-hover', {
         bubbles: true,
         composed: true,
         detail,
@@ -792,6 +868,23 @@ export class VscodeTree extends VscElement {
     }
   }
 
+  private _handleMouseOver(event: MouseEvent) {
+    const composedPath = event.composedPath();
+    const targetElement = composedPath.find(
+      (el: EventTarget) =>
+        (el as HTMLElement).tagName &&
+        (el as HTMLElement).tagName.toUpperCase() === 'LI'
+    );
+
+    if (targetElement) {
+      const pathStr = (targetElement as HTMLLIElement).dataset.path || '';
+      const path = pathStr.split('/').map((el) => Number(el));
+      const item = this._getItemByPath(path) as TreeItem;
+
+      this._hoverItem(item);
+    }
+  }
+
   private _handleClick(event: MouseEvent) {
     const composedPath = event.composedPath();
     const targetElement = composedPath.find(
@@ -863,7 +956,7 @@ export class VscodeTree extends VscElement {
     });
 
     return html`
-      <div @click="${this._handleClick}" class="${classes}">
+      <div @click="${this._handleClick}" @mouseover="${this._handleMouseOver}" class="${classes}">
         <ul>
           ${this._renderTree(this._data)}
         </ul>
