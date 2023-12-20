@@ -225,6 +225,17 @@ export class VscodeTree extends VscElement {
     this.requestUpdate();
   }
 
+  public closeAllFromPathStr(pathStr: string): void {
+    const path = pathStr.split('/').map((el) => Number(el));
+    const item = this._getItemByPath(path) as TreeItem;
+    if(item) {
+      if(item.subItems) {
+        this._closeSubTreeRecursively([item].concat(item.subItems));  // close item and all subitems
+        this.requestUpdate();
+      }
+    }
+  }
+
   public selectItemByPath(pathStr: string) {
     const path = pathStr.split('/').map((el) => Number(el));
     const item = this._getItemByPath(path) as TreeItem;
