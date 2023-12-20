@@ -225,6 +225,33 @@ export class VscodeTree extends VscElement {
     this.requestUpdate();
   }
 
+  public closeAllFromPathStr(pathStr: string): void {
+    const path = pathStr.split('/').map((el) => Number(el));
+    const item = this._getItemByPath(path) as TreeItem;
+    if(item) {
+      if(item.subItems) {
+        this._closeSubTreeRecursively([item].concat(item.subItems));  // close item and all subitems
+        this.requestUpdate();
+      }
+    }
+  }
+
+  public openAll(): void {
+    this._openSubTreeRecursively(this.data);
+    this.requestUpdate();
+  }
+
+  public openAllFromPathStr(pathStr: string): void {
+    const path = pathStr.split('/').map((el) => Number(el));
+    const item = this._getItemByPath(path) as TreeItem;
+    if(item) {
+      if(item.subItems) {
+        this._openSubTreeRecursively([item].concat(item.subItems));  // open item and all subitems
+        this.requestUpdate();
+      }
+    }
+  }
+
   public selectItemByPath(pathStr: string) {
     const path = pathStr.split('/').map((el) => Number(el));
     const item = this._getItemByPath(path) as TreeItem;
@@ -753,10 +780,11 @@ export class VscodeTree extends VscElement {
     this._hoveredItem = null;
   }
 
-  private _closeSubTreeRecursively(tree: TreeItem[]) {
+  private _closeSubTreeRecursively(tree: TreeItem[]) { this._setOpenStatusSubTreeRecursively(tree, false); }
+  private _openSubTreeRecursively(tree: TreeItem[]) { this._setOpenStatusSubTreeRecursively(tree, true); }
+  private _setOpenStatusSubTreeRecursively(tree: TreeItem[], openStatus: boolean) {
     tree.forEach((item) => {
-      item.open = false;
-
+      item.open = openStatus;
       if (item.subItems && item.subItems.length > 0) {
         this._closeSubTreeRecursively(item.subItems);
       }
