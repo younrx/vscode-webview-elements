@@ -238,6 +238,10 @@ export class VscodeTree extends VscElement {
     this._hoverItem(item, false);  // hover but do not emit event
   }
 
+  public hoverReset() {
+    this._hoverReset();
+  }
+
   connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('keydown', this._handleComponentKeyDownBound);
@@ -743,6 +747,13 @@ export class VscodeTree extends VscElement {
     }
   }
 
+  private _hoverReset() {
+    if (this._hoveredItem) {
+      this._hoveredItem.hovered = false;
+    }
+    this._hoveredItem = null;
+  }
+
   private _closeSubTreeRecursively(tree: TreeItem[]) {
     tree.forEach((item) => {
       item.open = false;
@@ -788,6 +799,15 @@ export class VscodeTree extends VscElement {
         bubbles: true,
         composed: true,
         detail,
+      })
+    );
+  }
+
+  private _emitHoverLeaveEvent() {
+    this.dispatchEvent(
+      new CustomEvent('vsc-hover-leave', {
+        bubbles: true,
+        composed: true,
       })
     );
   }
@@ -866,6 +886,11 @@ export class VscodeTree extends VscElement {
         }
       }
     }
+  }
+
+  private _handleMouseLeave() {
+    this._emitHoverLeaveEvent();
+    this._hoverReset();
   }
 
   private _handleMouseOver(event: MouseEvent) {
@@ -956,7 +981,7 @@ export class VscodeTree extends VscElement {
     });
 
     return html`
-      <div @click="${this._handleClick}" @mouseover="${this._handleMouseOver}" class="${classes}">
+      <div @click="${this._handleClick}" @mouseover="${this._handleMouseOver}" @mouseleave="${this._handleMouseLeave}" class="${classes}">
         <ul>
           ${this._renderTree(this._data)}
         </ul>
