@@ -786,7 +786,7 @@ export class VscodeTree extends VscElement {
     tree.forEach((item) => {
       item.open = openStatus;
       if (item.subItems && item.subItems.length > 0) {
-        this._closeSubTreeRecursively(item.subItems);
+        this._setOpenStatusSubTreeRecursively(item.subItems, openStatus);
       }
     });
   }
